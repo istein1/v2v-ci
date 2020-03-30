@@ -1,0 +1,40 @@
+---
+
+- name: Add {{ rhv_item }}
+  add_host:
+    name: "{{ rhv_item }}"
+    ansible_user: root
+    ansible_ssh_pass: "{{ hostvars[rhv_item].root_password }}"
+    ansible_pipelining: true
+
+- name: Copy nmon to {{ rhv_item }}
+  delegate_to: "{{ rhv_item }}"
+  copy:
+    src: "{{ nmon_local_dir }}/{{ nmon_file }}"
+    dest: "{{ nmon_location }}"
+    mode: "0777"
+
+# Add RHEL 8.1 repo and install Nmon requirements
+- name: Gathering facts
+  delegate_to: "{{ rhv_item }}"
+  setup:
+- block:
+    - name: Download rhel_81_x86.repo file
+      delegate_to: "{{ rhv_item }}"
+      command: wget --no-check-certificate \
+        https://code.engineering.redhat.com/gerrit/gitweb\?p\=rhevm-qe-automation/ansible-playbooks.git\;a\=blob_plain\;f\=roles/ci-map/files/rhel_81_x86.repo\;h\=4c95d8d16ab6979fbd507f005d66508bc5b85ee6\;hb\=refs/heads/master \
+        -O /etc/yum.repos.d/rhel_81_x86.repo
+      args:
+        warn: no
+
+    - name: Install ncurses packages for RHEL 8 in order to run Nmon
+      delegate_to: "{{ rhv_item }}"
+      command: "{{ command_item }}"
+      with_items:
+        - 'yum clean all'
+        - 'sudo yum install -y libncurses*'
+      loop_control:
+        loop_var: command_item
+      args:
+        warn: no
+  when: ansible_distribution_version == '8.1'
