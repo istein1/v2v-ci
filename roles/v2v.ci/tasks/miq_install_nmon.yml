@@ -36,6 +36,18 @@
   delegate_to: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"
   setup:
 - block:
+    - name: Ensure wget package is installed on CFME
+      delegate_to: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"
+      yum:
+        name: wget
+        state: present
+
+    - name: check if /etc/yum.repos.d/rhel_81_x86.repo file already exist
+      delegate_to: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"
+      stat:
+        path: /etc/yum.repos.d/rhel_81_x86.repo
+      register: repo_file_exist
+
     - name: Download rhel_81_x86.repo file to CFME RHEL 8 based
       delegate_to: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"
       command: wget --no-check-certificate \
@@ -43,6 +55,7 @@
         -O /etc/yum.repos.d/rhel_81_x86.repo
       args:
         warn: no
+      when: repo_file_exist.stat.exists == false
 
     - name: Install ncurses packages for RHEL 8 in order to run Nmon
       delegate_to: "{{ miq_vm_name }}.{{ miq_vm_dns_domain }}"

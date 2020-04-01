@@ -19,6 +19,18 @@
   delegate_to: "{{ rhv_item }}"
   setup:
 - block:
+    - name: Ensure wget package is installed on {{ rhv_item }}
+      delegate_to: "{{ rhv_item }}"
+      yum:
+        name: wget
+        state: present
+
+    - name: check if /etc/yum.repos.d/rhel_81_x86.repo file already exist
+      delegate_to: "{{ rhv_item }}"
+      stat:
+        path: /etc/yum.repos.d/rhel_81_x86.repo
+      register: repository_file_exist
+
     - name: Download rhel_81_x86.repo file
       delegate_to: "{{ rhv_item }}"
       command: wget --no-check-certificate \
@@ -26,6 +38,7 @@
         -O /etc/yum.repos.d/rhel_81_x86.repo
       args:
         warn: no
+      when: repository_file_exist.stat.exists == false
 
     - name: Install ncurses packages for RHEL 8 in order to run Nmon
       delegate_to: "{{ rhv_item }}"
