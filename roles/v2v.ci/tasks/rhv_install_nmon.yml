@@ -31,23 +31,25 @@
         path: /etc/yum.repos.d/rhel_81_x86.repo
       register: repository_file_exist
 
-    - name: Download rhel_81_x86.repo file
-      delegate_to: "{{ rhv_item }}"
-      command: wget --no-check-certificate \
-        https://code.engineering.redhat.com/gerrit/gitweb\?p\=rhevm-qe-automation/ansible-playbooks.git\;a\=blob_plain\;f\=roles/ci-map/files/rhel_81_x86.repo\;h\=4c95d8d16ab6979fbd507f005d66508bc5b85ee6\;hb\=refs/heads/master \
-        -O /etc/yum.repos.d/rhel_81_x86.repo
-      args:
-        warn: no
+    - block:
+        - name: Download rhel_81_x86.repo file to {{ rhv_item }}
+          delegate_to: "{{ rhv_item }}"
+          command: wget --no-check-certificate \
+            https://code.engineering.redhat.com/gerrit/gitweb\?p\=rhevm-qe-automation/ansible-playbooks.git\;a\=blob_plain\;f\=roles/ci-map/files/rhel_81_x86.repo\;h\=4c95d8d16ab6979fbd507f005d66508bc5b85ee6\;hb\=refs/heads/master \
+            -O /etc/yum.repos.d/rhel_81_x86.repo
+          args:
+            warn: no
+
+        - name: yum clean all
+          delegate_to: "{{ rhv_item }}"
+          command: yum clean all
+          args:
+            warn: no
       when: repository_file_exist.stat.exists == false
 
     - name: Install ncurses packages for RHEL 8 in order to run Nmon
       delegate_to: "{{ rhv_item }}"
-      command: "{{ command_item }}"
-      with_items:
-        - 'yum clean all'
-        - 'sudo yum install -y libncurses*'
-      loop_control:
-        loop_var: command_item
-      args:
-        warn: no
+      yum:
+        name: 'libncurses*'
+        state: present
   when: ansible_distribution_version == '8.1'
